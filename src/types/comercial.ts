@@ -1,3 +1,14 @@
+
+export type VendedorJaless = {
+  id: string;
+  nombre: string;
+  correo?: string | null;
+  telefono?: string | null;
+  rol: 'administrador' | 'supervisor' | 'vendedor';
+  estado?: string | null;
+  creado_en?: string | null;
+};
+
 export type Producto = {
   codigo: string;
   descripcion: string;

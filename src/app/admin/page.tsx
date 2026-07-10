@@ -54,6 +54,7 @@ export default function AdminPage() {
     { titulo: 'Productos', valor: resumen.productos.toLocaleString('es-PE'), href: '/admin/productos', texto: 'Buscar productos y actualizar precios.', icono: '📦' },
     { titulo: 'Cotizaciones', valor: resumen.cotizaciones.toLocaleString('es-PE'), href: '/historial', texto: 'Ver historial y detalles guardados.', icono: '📄' },
     { titulo: 'Descuentos', valor: 'Por cliente', href: '/admin/descuentos', texto: 'Configurar descuentos por categoría.', icono: '🏷️' },
+    { titulo: 'Vendedores', valor: 'Accesos', href: '/admin/vendedores', texto: 'Usuarios internos, roles y PIN de ingreso.', icono: '🧑‍💼' },
   ];
 
   return (
@@ -68,6 +69,7 @@ export default function AdminPage() {
           <div className="flex flex-wrap gap-3">
             <a href="/cotizador" className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-5 py-3 rounded-xl">Ir al cotizador</a>
             <a href="/historial" className="bg-slate-800 hover:bg-slate-700 border border-slate-600 font-bold px-5 py-3 rounded-xl">Historial</a>
+            <a href="/login" className="bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-5 py-3 rounded-xl">Ingresar vendedor</a>
           </div>
         </div>
 
@@ -96,7 +98,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 mt-6">
           {cards.map((card) => (
             <a key={card.titulo} href={card.href} className="bg-slate-900 border border-slate-700 hover:border-cyan-400 rounded-2xl p-6 block transition">
               <div className="flex items-center justify-between gap-3">

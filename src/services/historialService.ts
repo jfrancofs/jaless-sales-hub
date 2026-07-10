@@ -74,7 +74,7 @@ export async function listarCotizaciones(busqueda = ''): Promise<CotizacionGuard
 
   const q = busqueda.trim();
   if (q) {
-    query = query.or(`numero.ilike.%${q}%,cliente_razon_social.ilike.%${q}%,cliente_ruc.ilike.%${q}%`);
+    query = query.or(`numero.ilike.%${q}%,cliente_razon_social.ilike.%${q}%,cliente_ruc.ilike.%${q}%,vendedor.ilike.%${q}%`);
   }
 
   const { data, error } = await query;

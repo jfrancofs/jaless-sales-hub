@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ClienteSelector, DatosCliente, PedidoPanel, ResultadoPanel, ResumenCotizacion, NuevoClienteModal, DescuentosClienteModal } from '@/components/cotizador';
+import { VendedorBar } from '@/components/VendedorBar';
 import { construirFilaDesdeProducto, calcularTotales } from '@/lib/cotizador/calculos';
 import { exportarExcelCotizacion } from '@/lib/excel/exportarCotizacion';
 import { abrirPdfCotizacion } from '@/lib/pdf/exportarPdfCotizacion';
@@ -11,6 +12,7 @@ import { guardarCotizacion } from '@/services/historialService';
 import { useClientes } from '@/hooks/useClientes';
 import { useDescuentosCliente } from '@/hooks/useDescuentosCliente';
 import type { Producto, ResultadoCotizacion } from '@/types/comercial';
+import { obtenerVendedorSesion, type VendedorSesion } from '@/lib/auth/vendedorSession';
 
 const pedidoInicial = `Hola, necesito cotizar para hoy:
 
@@ -50,6 +52,11 @@ export default function CotizadorPage() {
   const [observaciones, setObservaciones] = useState('Precios expresados en dólares americanos. Validez de la cotización: 7 días.');
   const [modalCliente, setModalCliente] = useState(false);
   const [modalDescuentos, setModalDescuentos] = useState(false);
+  const [vendedor, setVendedor] = useState<VendedorSesion | null>(null);
+
+  useEffect(() => {
+    setVendedor(obtenerVendedorSesion());
+  }, []);
 
   const clienteSeleccionado = clientes.find((cliente) => cliente.id === clienteId) || null;
   const totales = useMemo(() => calcularTotales(resultados), [resultados]);
@@ -99,6 +106,7 @@ export default function CotizadorPage() {
           totales: totalesGenerados,
           observaciones,
           pedidoOriginal: texto,
+          vendedor: vendedor?.nombre || 'JALESS',
         });
         setGuardado(`Cotización ${numeroCotizacion} guardada en historial.`);
       }
@@ -123,6 +131,7 @@ export default function CotizadorPage() {
       numero,
       observaciones,
       totales,
+      vendedor: vendedor?.nombre || 'JALESS',
     });
   }
 
@@ -143,6 +152,7 @@ export default function CotizadorPage() {
         numero,
         observaciones,
         totales,
+        vendedor: vendedor?.nombre || 'JALESS',
       });
     } catch (err: any) {
       console.error(err);
@@ -161,8 +171,11 @@ export default function CotizadorPage() {
         <div className="mt-4 flex gap-3">
           <a href="/historial" className="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl px-4 py-2 text-sm font-bold">Ver historial</a>
           <a href="/admin" className="bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl px-4 py-2 text-sm font-bold">Administración</a>
+          <a href="/login" className="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl px-4 py-2 text-sm font-bold">Vendedor</a>
           {guardado && <span className="text-emerald-300 text-sm py-2">{guardado}</span>}
         </div>
+
+        <VendedorBar />
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
           <ClienteSelector

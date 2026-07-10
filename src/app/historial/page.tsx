@@ -84,6 +84,7 @@ export default function HistorialPage() {
           igv: Number(seleccionada.igv || 0),
           total: Number(seleccionada.total || 0),
         },
+        vendedor: seleccionada.vendedor || 'JALESS',
       });
     } catch (err: any) {
       console.error(err);
@@ -146,7 +147,7 @@ export default function HistorialPage() {
               value={busqueda}
               onChange={(event) => setBusqueda(event.target.value)}
               className="flex-1 bg-slate-950 border border-slate-600 rounded-xl px-4 py-3"
-              placeholder="Ej: AYS PIURA, 20175674382, COT-2026..."
+              placeholder="Ej: AYS PIURA, vendedor, RUC o COT-2026..."
             />
             <button onClick={cargar} disabled={loading} className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-black font-bold px-6 py-3 rounded-xl">
               {loading ? 'Buscando...' : 'Buscar'}
@@ -169,6 +170,7 @@ export default function HistorialPage() {
                   <div className="font-bold text-cyan-300">{cotizacion.numero}</div>
                   <div className="text-sm mt-1">{cotizacion.cliente_razon_social || 'Sin cliente'}</div>
                   <div className="text-xs text-slate-400 mt-1">RUC: {cotizacion.cliente_ruc || '-'}</div>
+                  <div className="text-xs text-slate-400 mt-1">Vendedor: {cotizacion.vendedor || 'JALESS'}</div>
                   <div className="flex justify-between mt-3 text-sm">
                     <span>{new Date(cotizacion.fecha).toLocaleString('es-PE')}</span>
                     <b>{money(Number(cotizacion.total || 0))}</b>
@@ -189,6 +191,7 @@ export default function HistorialPage() {
                   <div className="md:col-span-2"><b>Cliente:</b> {seleccionada.cliente_razon_social || 'Sin cliente'}</div>
                   <div><b>RUC:</b> {seleccionada.cliente_ruc || '-'}</div>
                   <div><b>Condición:</b> {seleccionada.condicion_pago || 'Contado'}</div>
+                  <div><b>Vendedor:</b> {seleccionada.vendedor || 'JALESS'}</div>
                   <div className="md:col-span-2"><b>Observaciones:</b> {seleccionada.observaciones || '-'}</div>
                 </div>
 

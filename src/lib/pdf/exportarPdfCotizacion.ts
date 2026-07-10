@@ -8,6 +8,7 @@ type Params = {
   resultados: ResultadoCotizacion[];
   observaciones?: string;
   totales: TotalesCotizacion;
+  vendedor?: string;
 };
 
 function escapeHtml(value: unknown) {
@@ -23,13 +24,14 @@ function fechaActual() {
   return new Date().toLocaleDateString('es-PE');
 }
 
-export function abrirPdfCotizacion({ numero, cliente, cotizacion, resultados, observaciones, totales }: Params) {
+export function abrirPdfCotizacion({ numero, cliente, cotizacion, resultados, observaciones, totales, vendedor }: Params) {
   const clienteNombre = cliente?.razon_social || cotizacion?.cliente_razon_social || 'Sin cliente';
   const ruc = cliente?.ruc || cotizacion?.cliente_ruc || '-';
   const direccion = cliente?.direccion || cotizacion?.cliente_direccion || '-';
   const ciudad = cliente?.ciudad || cotizacion?.cliente_ciudad || '-';
   const condicion = cliente?.condicion_pago || cotizacion?.condicion_pago || 'Contado';
   const obs = observaciones || cotizacion?.observaciones || 'Precios expresados en dólares americanos. Validez de la cotización: 7 días.';
+  const vendedorNombre = vendedor || cotizacion?.vendedor || 'JALESS';
 
   const filas = resultados
     .filter((row) => row.estado === 'Exacto')
@@ -113,6 +115,7 @@ export function abrirPdfCotizacion({ numero, cliente, cotizacion, resultados, ob
       <div><span class="label">Ciudad:</span> ${escapeHtml(ciudad)}</div>
       <div><span class="label">Moneda:</span> Dólares Americanos (US$)</div>
       <div><span class="label">Condición:</span> ${escapeHtml(condicion)}</div>
+      <div><span class="label">Vendedor:</span> ${escapeHtml(vendedorNombre)}</div>
     </section>
 
     <table>
@@ -147,7 +150,7 @@ export function abrirPdfCotizacion({ numero, cliente, cotizacion, resultados, ob
         <b>Condiciones:</b><br />
         Precios expresados en dólares americanos. Cotización sujeta a disponibilidad y condiciones comerciales acordadas.
       </div>
-      <div class="signature">JALESS IMPORT SAC</div>
+      <div class="signature">${escapeHtml(vendedorNombre)}<br />JALESS IMPORT SAC</div>
     </div>
   </main>
 </body>

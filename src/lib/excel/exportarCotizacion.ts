@@ -7,9 +7,10 @@ type Params = {
   numero: string;
   observaciones: string;
   totales: TotalesCotizacion;
+  vendedor?: string;
 };
 
-export async function exportarExcelCotizacion({ resultados, cliente, numero, observaciones, totales }: Params) {
+export async function exportarExcelCotizacion({ resultados, cliente, numero, observaciones, totales, vendedor }: Params) {
   const XLSX = await import('xlsx');
   const clienteNombre = cliente?.razon_social || 'Sin cliente';
   const ciudad = cliente?.ciudad || '';
@@ -25,6 +26,7 @@ export async function exportarExcelCotizacion({ resultados, cliente, numero, obs
     ['Cliente:', clienteNombre, '', 'RUC:', ruc],
     ['Dirección:', direccion, '', 'Ciudad:', ciudad],
     ['Moneda:', 'Dólares Americanos (US$)', '', 'Condición:', condicion],
+    ['Vendedor:', vendedor || 'JALESS', '', '', ''],
     [],
     ['Ítem', 'Código', 'Descripción', 'Cantidad', 'P. Unit. (US$)', 'Dscto. %', 'P. Final (US$)', 'Total (US$)'],
   ];
