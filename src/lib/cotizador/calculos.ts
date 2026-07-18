@@ -1,4 +1,5 @@
 import type { Producto, ResultadoCotizacion, TotalesCotizacion } from '@/types/comercial';
+import { obtenerDescuentoCategoria } from '@/lib/cotizador/categorias';
 import { round2 } from '@/lib/utils/format';
 
 export function calcularTotales(resultados: ResultadoCotizacion[]): TotalesCotizacion {
@@ -14,7 +15,7 @@ export function construirFilaDesdeProducto(
   descuentos: Record<string, number>
 ): ResultadoCotizacion {
   const precioLista = Number(producto.precio_usd_sin_igv || 0);
-  const descuento = Number(descuentos[producto.categoria] || 0);
+  const descuento = obtenerDescuentoCategoria(producto.categoria, descuentos);
   const precioFinal = Number((precioLista * (1 - descuento / 100)).toFixed(4));
   const total = round2(precioFinal * row.cantidad);
 

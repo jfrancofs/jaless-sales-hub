@@ -3,13 +3,13 @@ import type { Cliente } from '@/types/comercial';
 
 export type ClienteInput = {
   razon_social: string;
-  ruc?: string;
-  direccion?: string;
-  ciudad?: string;
-  contacto?: string;
-  telefono?: string;
-  correo?: string;
-  condicion_pago?: string;
+  ruc?: string | null;
+  direccion?: string | null;
+  ciudad?: string | null;
+  contacto?: string | null;
+  telefono?: string | null;
+  correo?: string | null;
+  condicion_pago?: string | null;
 };
 
 export const CATEGORIAS_DESCUENTO = [

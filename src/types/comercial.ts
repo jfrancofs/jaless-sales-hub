@@ -7,6 +7,7 @@ export type VendedorJaless = {
   rol: 'administrador' | 'supervisor' | 'vendedor';
   estado?: string | null;
   creado_en?: string | null;
+  actualizado_en?: string | null;
 };
 
 export type Producto = {

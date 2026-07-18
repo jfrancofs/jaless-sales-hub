@@ -27,6 +27,7 @@ export function DescuentosClienteModal({ open, cliente, descuentosActuales, onCl
   }, [open, descuentosActuales]);
 
   if (!open || !cliente) return null;
+  const clienteActivo = cliente;
 
   function cambiar(categoria: string, value: string) {
     const n = Math.max(0, Math.min(100, Number(value) || 0));
@@ -37,7 +38,7 @@ export function DescuentosClienteModal({ open, cliente, descuentosActuales, onCl
     setLoading(true);
     setError('');
     try {
-      await guardarDescuentosCliente(cliente.id, descuentos);
+      await guardarDescuentosCliente(clienteActivo.id, descuentos);
       onGuardado(descuentos);
       onClose();
     } catch (err: any) {
@@ -54,7 +55,7 @@ export function DescuentosClienteModal({ open, cliente, descuentosActuales, onCl
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold">Descuentos por categoría</h2>
-            <p className="text-sm text-slate-300 mt-1">{cliente.razon_social}</p>
+            <p className="text-sm text-slate-300 mt-1">{clienteActivo.razon_social}</p>
           </div>
           <button onClick={onClose} className="rounded-lg bg-slate-800 hover:bg-slate-700 px-4 py-2">Cerrar</button>
         </div>

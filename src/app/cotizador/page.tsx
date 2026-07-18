@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ClienteSelector, DatosCliente, PedidoPanel, ResultadoPanel, ResumenCotizacion, NuevoClienteModal, DescuentosClienteModal } from '@/components/cotizador';
+import { ClienteSelector, DatosCliente, PedidoPanel, ResultadoPanel, ResumenCotizacion, NuevoClienteModal, DescuentosClienteModal, ComercialInsights } from '@/components/cotizador';
 import { VendedorBar } from '@/components/VendedorBar';
 import { construirFilaDesdeProducto, calcularTotales } from '@/lib/cotizador/calculos';
 import { exportarExcelCotizacion } from '@/lib/excel/exportarCotizacion';
@@ -12,7 +12,9 @@ import { guardarCotizacion } from '@/services/historialService';
 import { useClientes } from '@/hooks/useClientes';
 import { useDescuentosCliente } from '@/hooks/useDescuentosCliente';
 import type { Producto, ResultadoCotizacion } from '@/types/comercial';
-import { obtenerVendedorSesion, type VendedorSesion } from '@/lib/auth/vendedorSession';
+import type { ProductoBusqueda } from '@/lib/search/productSearch';
+import { analizarCotizacionComercial } from '@/lib/jaless/comercialInsights';
+import { obtenerVendedorSesion, puedeVerAdministracion, type VendedorSesion } from '@/lib/auth/vendedorSession';
 
 const pedidoInicial = `Hola, necesito cotizar para hoy:
 
@@ -55,12 +57,20 @@ export default function CotizadorPage() {
   const [vendedor, setVendedor] = useState<VendedorSesion | null>(null);
 
   useEffect(() => {
-    setVendedor(obtenerVendedorSesion());
+    const sesion = obtenerVendedorSesion();
+
+    if (!sesion) {
+      window.location.replace('/login');
+      return;
+    }
+
+    setVendedor(sesion);
   }, []);
 
   const clienteSeleccionado = clientes.find((cliente) => cliente.id === clienteId) || null;
   const totales = useMemo(() => calcularTotales(resultados), [resultados]);
   const revisiones = resultados.filter((r) => r.estado !== 'Exacto').length;
+  const insights = useMemo(() => analizarCotizacionComercial(texto, resultados, descuentos), [texto, resultados, descuentos]);
   const numero = numeroCotizacion;
 
   useEffect(() => {
@@ -80,6 +90,15 @@ export default function CotizadorPage() {
       localStorage.removeItem('jaless_cotizacion_duplicar');
     }
   }, []);
+
+
+  function agregarProductoManual(producto: ProductoBusqueda, cantidad: number) {
+    const linea = `[COD:${producto.codigo}] x${cantidad} - ${producto.descripcion}`;
+    setTexto((actual) => `${actual.trimEnd()}
+${linea}
+`);
+    setGuardado(`${producto.codigo} agregado al pedido. Presiona Generar cotización.`);
+  }
 
   function seleccionarOpcion(item: number, producto: Producto) {
     setResultados((actuales) =>
@@ -162,6 +181,14 @@ export default function CotizadorPage() {
     }
   }
 
+  if (!vendedor) {
+    return (
+      <main className="min-h-screen bg-[#020617] text-white flex items-center justify-center p-6">
+        <div className="text-slate-300">Validando acceso...</div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#020617] text-white p-6 lg:p-10">
       <section className="max-w-7xl mx-auto">
@@ -170,7 +197,14 @@ export default function CotizadorPage() {
         <p className="mt-2 text-slate-300">Clientes nuevos, descuentos por categoría, historial, Excel y PDF profesional.</p>
         <div className="mt-4 flex gap-3">
           <a href="/historial" className="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl px-4 py-2 text-sm font-bold">Ver historial</a>
-          <a href="/admin" className="bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl px-4 py-2 text-sm font-bold">Administración</a>
+          {puedeVerAdministracion(vendedor) && (
+            <a
+              href="/admin"
+              className="bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl px-4 py-2 text-sm font-bold"
+            >
+              Administración
+            </a>
+          )}
           <a href="/login" className="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl px-4 py-2 text-sm font-bold">Vendedor</a>
           {guardado && <span className="text-emerald-300 text-sm py-2">{guardado}</span>}
         </div>
@@ -202,8 +236,10 @@ export default function CotizadorPage() {
             onGenerar={generar}
             onExportar={exportarExcelProfesional}
             onExportarPdf={exportarPdfProfesional}
+            onAgregarProducto={agregarProductoManual}
           />
 
+          <div>
           <ResultadoPanel
             resultados={resultados}
             revisiones={revisiones}
@@ -211,6 +247,8 @@ export default function CotizadorPage() {
             totales={totales}
             onSeleccionarOpcion={seleccionarOpcion}
           />
+          <ComercialInsights insights={insights} />
+          </div>
         </div>
 
         <NuevoClienteModal

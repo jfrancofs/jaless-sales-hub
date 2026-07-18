@@ -55,6 +55,7 @@ export default function AdminPage() {
     { titulo: 'Cotizaciones', valor: resumen.cotizaciones.toLocaleString('es-PE'), href: '/historial', texto: 'Ver historial y detalles guardados.', icono: '📄' },
     { titulo: 'Descuentos', valor: 'Por cliente', href: '/admin/descuentos', texto: 'Configurar descuentos por categoría.', icono: '🏷️' },
     { titulo: 'Vendedores', valor: 'Accesos', href: '/admin/vendedores', texto: 'Usuarios internos, roles y PIN de ingreso.', icono: '🧑‍💼' },
+    { titulo: 'Reportes', valor: 'Por vendedor', href: '/admin/reportes', texto: 'Ranking, montos, clientes y ticket promedio.', icono: '📊' },
   ];
 
   return (
@@ -98,7 +99,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-6">
           {cards.map((card) => (
             <a key={card.titulo} href={card.href} className="bg-slate-900 border border-slate-700 hover:border-cyan-400 rounded-2xl p-6 block transition">
               <div className="flex items-center justify-between gap-3">
@@ -146,6 +147,8 @@ export default function AdminPage() {
               <a href="/admin/clientes" className="rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 font-bold p-4">Administrar clientes</a>
               <a href="/admin/productos" className="rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 font-bold p-4">Actualizar precios</a>
               <a href="/admin/descuentos" className="rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 font-bold p-4">Configurar descuentos</a>
+              <a href="/admin/vendedores" className="rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 font-bold p-4">Administrar vendedores</a>
+              <a href="/admin/reportes" className="rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 font-bold p-4">Reportes por vendedor</a>
             </div>
           </div>
         </div>

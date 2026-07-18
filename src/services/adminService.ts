@@ -21,6 +21,22 @@ export type ResumenClienteAdmin = {
   ultima_numero: string | null;
 };
 
+export type ProductoFrecuenteCliente = {
+  codigo: string;
+  descripcion: string;
+  categoria: string;
+  cantidad_total: number;
+  monto_total: number;
+  veces_cotizado: number;
+};
+
+export type FichaClienteAdmin = {
+  resumen: ResumenClienteAdmin;
+  descuentos: Record<string, number>;
+  cotizaciones: CotizacionGuardada[];
+  productosFrecuentes: ProductoFrecuenteCliente[];
+};
+
 const CLIENTE_SELECT = 'id, razon_social, ruc, direccion, ciudad, contacto, telefono, correo, condicion_pago, estado';
 
 export async function resumenAdmin() {
@@ -125,27 +141,44 @@ export async function reactivarClienteAdmin(clienteId: string): Promise<Cliente>
   return data as Cliente;
 }
 
+async function listarCotizacionesCliente(cliente: Cliente, limite = 30): Promise<CotizacionGuardada[]> {
+  const resultados = new Map<string, CotizacionGuardada>();
+
+  if (cliente.id) {
+    const { data, error } = await supabase
+      .from('cotizaciones_jaless')
+      .select('*')
+      .eq('cliente_id', cliente.id)
+      .order('fecha', { ascending: false })
+      .limit(limite);
+
+    if (error) throw error;
+    for (const row of (data || []) as CotizacionGuardada[]) resultados.set(row.id, row);
+  }
+
+  if (cliente.ruc) {
+    const { data, error } = await supabase
+      .from('cotizaciones_jaless')
+      .select('*')
+      .eq('cliente_ruc', cliente.ruc)
+      .order('fecha', { ascending: false })
+      .limit(limite);
+
+    if (error) throw error;
+    for (const row of (data || []) as CotizacionGuardada[]) resultados.set(row.id, row);
+  }
+
+  return Array.from(resultados.values())
+    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+    .slice(0, limite);
+}
+
 export async function resumenClienteAdmin(cliente: Cliente): Promise<ResumenClienteAdmin> {
   if (!cliente.id && !cliente.ruc) {
     return { cotizaciones: 0, monto_total: 0, ultima_fecha: null, ultima_numero: null };
   }
 
-  let query = supabase
-    .from('cotizaciones_jaless')
-    .select('numero, fecha, total, cliente_id, cliente_ruc')
-    .order('fecha', { ascending: false })
-    .limit(100);
-
-  if (cliente.id) {
-    query = query.eq('cliente_id', cliente.id);
-  } else if (cliente.ruc) {
-    query = query.eq('cliente_ruc', cliente.ruc);
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
-
-  const cotizaciones = (data || []) as Pick<CotizacionGuardada, 'numero' | 'fecha' | 'total'>[];
+  const cotizaciones = await listarCotizacionesCliente(cliente, 100);
   const monto_total = cotizaciones.reduce((acc, c) => acc + Number(c.total || 0), 0);
   const ultima = cotizaciones[0];
 
@@ -155,6 +188,70 @@ export async function resumenClienteAdmin(cliente: Cliente): Promise<ResumenClie
     ultima_fecha: ultima?.fecha || null,
     ultima_numero: ultima?.numero || null,
   };
+}
+
+export async function obtenerFichaClienteAdmin(cliente: Cliente): Promise<FichaClienteAdmin> {
+  const cotizaciones = await listarCotizacionesCliente(cliente, 30);
+  const resumen: ResumenClienteAdmin = {
+    cotizaciones: cotizaciones.length,
+    monto_total: cotizaciones.reduce((acc, c) => acc + Number(c.total || 0), 0),
+    ultima_fecha: cotizaciones[0]?.fecha || null,
+    ultima_numero: cotizaciones[0]?.numero || null,
+  };
+
+  const descuentos: Record<string, number> = {};
+  for (const categoria of CATEGORIAS_DESCUENTO) descuentos[categoria] = 0;
+
+  if (cliente.id) {
+    const { data, error } = await supabase
+      .from('descuentos_categoria_cliente')
+      .select('categoria, porcentaje')
+      .eq('cliente_id', cliente.id);
+
+    if (error) throw error;
+    for (const row of data || []) descuentos[row.categoria] = Number(row.porcentaje) || 0;
+  }
+
+  const productosFrecuentes: ProductoFrecuenteCliente[] = [];
+  const idsCotizaciones = cotizaciones.map((c) => c.id).filter(Boolean);
+
+  if (idsCotizaciones.length > 0) {
+    const { data, error } = await supabase
+      .from('cotizacion_detalle_jaless')
+      .select('cotizacion_id, codigo, descripcion, categoria, cantidad, total')
+      .in('cotizacion_id', idsCotizaciones);
+
+    if (error) throw error;
+
+    const acumulado = new Map<string, ProductoFrecuenteCliente & { cotizaciones: Set<string> }>();
+    for (const row of data || []) {
+      const key = String(row.codigo || row.descripcion || '').trim();
+      if (!key) continue;
+      const actual = acumulado.get(key) || {
+        codigo: row.codigo || '-',
+        descripcion: row.descripcion || 'Sin descripción',
+        categoria: row.categoria || '',
+        cantidad_total: 0,
+        monto_total: 0,
+        veces_cotizado: 0,
+        cotizaciones: new Set<string>(),
+      };
+      actual.cantidad_total += Number(row.cantidad || 0);
+      actual.monto_total += Number(row.total || 0);
+      actual.cotizaciones.add(String(row.cotizacion_id));
+      actual.veces_cotizado = actual.cotizaciones.size;
+      acumulado.set(key, actual);
+    }
+
+    productosFrecuentes.push(
+      ...Array.from(acumulado.values())
+        .sort((a, b) => b.veces_cotizado - a.veces_cotizado || b.monto_total - a.monto_total)
+        .slice(0, 10)
+        .map(({ cotizaciones: _cotizaciones, ...item }) => item)
+    );
+  }
+
+  return { resumen, descuentos, cotizaciones, productosFrecuentes };
 }
 
 export async function buscarProductosAdmin(termino: string): Promise<ProductoAdmin[]> {

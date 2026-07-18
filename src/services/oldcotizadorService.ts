@@ -13,37 +13,6 @@ type ProductoManual = {
   descripcion: string;
 };
 
-type ProductoCatalogoExtendido = Producto & {
-  medida?: string | null;
-  material?: string | null;
-};
-
-const CLAVE_VITON_AS568 = /^ORING\|VITON\|\|(2-\d{3})$/i;
-
-function numeroNormalizado(valor: string): string {
-  const numero = Number(valor.replace(',', '.'));
-  return Number.isInteger(numero)
-    ? String(numero)
-    : String(numero).replace(/0+$/, '').replace(/\.$/, '');
-}
-
-function extraerMedidaMetrica(descripcion: string): string | null {
-  const coincidencias = Array.from(
-    descripcion.matchAll(
-      /(\d+(?:[.,]\d+)?)\s*[xX×*]\s*(\d+(?:[.,]\d+)?)\s*(?:MM)?/gi
-    )
-  );
-
-  const ultima = coincidencias.at(-1);
-  if (!ultima) return null;
-
-  return `${numeroNormalizado(ultima[1])}X${numeroNormalizado(ultima[2])}`;
-}
-
-function claveNitriloEquivalencia(as568: string): string {
-  return `ORING|NBR|70|${as568}`;
-}
-
 function extraerProductosManuales(texto: string): {
   textoParaInterpretar: string;
   productosManuales: ProductoManual[];
@@ -111,44 +80,19 @@ export async function generarCotizacionDesdeTexto(
     )
   );
 
-  const codigosManuales = Array.from(
-    new Set(productosManuales.map((item) => item.codigo))
-  );
-
-  // Para Vitón solicitado por número AS568 (2-008, 2-010, etc.),
-  // primero consultamos el equivalente NBR del catálogo Jaless.
-  // Su descripción contiene la medida métrica que usa la clave de Vitón.
-  const equivalenciasSolicitadas = new Map<string, string>();
-  for (const clave of claves) {
-    const match = clave.match(CLAVE_VITON_AS568);
-    if (match) {
-      equivalenciasSolicitadas.set(match[1], clave);
-    }
-  }
-
-  const clavesEquivalenciaNitrilo = Array.from(
-    equivalenciasSolicitadas.keys(),
-    claveNitriloEquivalencia
-  );
-
-  const clavesPrimeraConsulta = Array.from(
-    new Set([...claves, ...clavesEquivalenciaNitrilo])
-  );
-
-  const camposProducto =
-    'codigo, descripcion, categoria, material, medida, precio_usd_sin_igv, clave_busqueda';
+  const codigosManuales = Array.from(new Set(productosManuales.map((item) => item.codigo)));
 
   const [respuestaClaves, respuestaCodigos] = await Promise.all([
-    clavesPrimeraConsulta.length > 0
+    claves.length > 0
       ? supabase
           .from('productos_catalogo')
-          .select(camposProducto)
-          .in('clave_busqueda', clavesPrimeraConsulta)
+          .select('codigo, descripcion, categoria, precio_usd_sin_igv, clave_busqueda')
+          .in('clave_busqueda', claves)
       : Promise.resolve({ data: [], error: null }),
     codigosManuales.length > 0
       ? supabase
           .from('productos_catalogo')
-          .select(camposProducto)
+          .select('codigo, descripcion, categoria, precio_usd_sin_igv, clave_busqueda')
           .in('codigo', codigosManuales)
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -156,62 +100,8 @@ export async function generarCotizacionDesdeTexto(
   if (respuestaClaves.error) throw respuestaClaves.error;
   if (respuestaCodigos.error) throw respuestaCodigos.error;
 
-  const productosPrimeraConsulta = (respuestaClaves.data ||
-    []) as ProductoCatalogoExtendido[];
-  const productosManualData = (respuestaCodigos.data ||
-    []) as ProductoCatalogoExtendido[];
-
-  const aliasVitones = new Map<string, string>();
-  const clavesMetricasVitton = new Set<string>();
-
-  for (const [as568, claveOriginalVitton] of equivalenciasSolicitadas) {
-    const claveNitrilo = claveNitriloEquivalencia(as568);
-    const equivalenteNitrilo = productosPrimeraConsulta.find(
-      (producto) => producto.clave_busqueda === claveNitrilo
-    );
-
-    if (!equivalenteNitrilo) continue;
-
-    const medidaMetrica =
-      extraerMedidaMetrica(equivalenteNitrilo.descripcion) ||
-      (equivalenteNitrilo.medida &&
-      /[X×*]/i.test(equivalenteNitrilo.medida)
-        ? equivalenteNitrilo.medida
-            .replace(/,/g, '.')
-            .replace(/[×*]/g, 'X')
-            .replace(/\s+/g, '')
-            .toUpperCase()
-        : null);
-
-    if (!medidaMetrica) continue;
-
-    const claveMetricaVitton = `ORING|VITON||${medidaMetrica}`;
-    aliasVitones.set(claveOriginalVitton, claveMetricaVitton);
-    clavesMetricasVitton.add(claveMetricaVitton);
-  }
-
-  const respuestaVitones =
-    clavesMetricasVitton.size > 0
-      ? await supabase
-          .from('productos_catalogo')
-          .select(camposProducto)
-          .in('clave_busqueda', Array.from(clavesMetricasVitton))
-      : { data: [], error: null };
-
-  if (respuestaVitones.error) throw respuestaVitones.error;
-
-  const productosVitones = (respuestaVitones.data ||
-    []) as ProductoCatalogoExtendido[];
-
-  // Los NBR consultados únicamente como equivalencia no deben entrar como
-  // candidatos de la cotización de Vitón.
-  const clavesOriginales = new Set(claves);
-  const productos = [
-    ...productosPrimeraConsulta.filter((producto) =>
-      clavesOriginales.has(producto.clave_busqueda)
-    ),
-    ...productosVitones,
-  ] as ProductoCatalogoExtendido[];
+  const productos = (respuestaClaves.data || []) as Producto[];
+  const productosManualData = (respuestaCodigos.data || []) as Producto[];
 
   const productosPorClave = new Map<string, Producto[]>();
   for (const producto of productos) {
@@ -220,17 +110,7 @@ export async function generarCotizacionDesdeTexto(
     productosPorClave.set(producto.clave_busqueda, lista);
   }
 
-  // Vincula la clave solicitada 2-XXX con el producto Vitón métrico real.
-  for (const [claveOriginalVitton, claveMetricaVitton] of aliasVitones) {
-    const equivalentes = productosPorClave.get(claveMetricaVitton) || [];
-    if (equivalentes.length > 0) {
-      productosPorClave.set(claveOriginalVitton, equivalentes);
-    }
-  }
-
-  const porCodigo = new Map(
-    productosManualData.map((producto) => [producto.codigo, producto])
-  );
+  const porCodigo = new Map(productosManualData.map((producto) => [producto.codigo, producto]));
   const resultados: ResultadoCotizacion[] = [];
 
   for (const manual of productosManuales) {
